@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
+  <remote name="origin"
+          fetch="https://github.com/un-ch/" />
+
   <default revision="refs/heads/main"
            remote="origin"
            sync-j="4" />
 
-  <remote name="origin"
-          fetch="ssh://git@github.com:un-ch/" />
-
-  <project remote="origin" name="new_prj"
-           path="new_prj"/>
+  <project name="new_prj"
+           path="new_prj" />
 
   <project name="last_prj"
-           path="last_prj"/>
+           path="last_prj" />
 </manifest>
+
