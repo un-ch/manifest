@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <default revision="refs/heads/master"
+           remote="origin"
+           sync-j="4" />
+
+  <remote name="origin"
+          fetch="https://github.com/un-ch/"/>
+
+  <project remote="origin" name="New Projects Script"
+           path="new_prj.git"/>
+
+  <project name="Last Project Script"
+           path="last_prj.git"/>
+</manifest>
