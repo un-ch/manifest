@@ -7,8 +7,8 @@
            remote="origin"
            sync-j="4" />
 
-  <project name="new_prj"
-           path="new_prj" />
+  <project name="new_project"
+           path="new_project" />
 
   <project name="last_prj"
            path="last_prj" />
