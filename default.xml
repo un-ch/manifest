@@ -5,7 +5,7 @@
            sync-j="4" />
 
   <remote name="origin"
-          fetch="https://github.com/un-ch/"/>
+          fetch="git@github.com:un-ch/" />
 
   <project remote="origin" name="New Projects Script"
            path="new_prj.git"/>
