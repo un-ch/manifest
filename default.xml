@@ -5,7 +5,7 @@
            sync-j="4" />
 
   <remote name="origin"
-          fetch="git@github.com:un-ch/" />
+          fetch="ssh://git@github.com:un-ch/" />
 
   <project remote="origin" name="new_prj"
            path="new_prj"/>
