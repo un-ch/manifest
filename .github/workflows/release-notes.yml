@@ -1,0 +1,79 @@
+name: Generate Release Notes
+
+on:
+  release:
+    types: [published]  # Triggers when the release is created/published
+
+jobs:
+  generate-release-notes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Generate release notes
+        run: |
+	ORG="un-ch"
+	GITHUB_HOST="git@github.com"
+	RELEASE_NOTES_FILE="release_notes.md"
+
+	if [ -z "$1" ]; then
+		echo "usage: $0 <release-tag>"
+		exit 1
+	fi
+
+	RELEASE_TAG="$1"
+
+	REPOS=$(gh repo list "$ORG" --limit 500 --json name --jq '.[].name' | grep -E '^(manifest|last_prj|new_project|b_prj|a_prj|c_prj)$')
+
+	# ensure manifest repo name goes first, other repo names sorted after:
+	REPOS_SORTED=$(echo "$REPOS" | grep -v '^manifest$' | sort)
+	REPOS_SORTED=$(echo -e "manifest\n$REPOS_SORTED")
+
+	# write a header with the release tag as the title:
+	echo "### Release Notes for $RELEASE_TAG \($(date '+%Y-%m-%d')\)" > "$RELEASE_NOTES_FILE"
+	echo >> "$RELEASE_NOTES_FILE"
+
+	for REPO in $REPOS_SORTED; do
+		echo "processing $REPO"
+		{
+			echo "### [$REPO](https://github.com/$ORG/$REPO)"
+
+			git clone --quiet "$GITHUB_HOST:$ORG/$REPO.git"
+
+			cd "$REPO" || exit 1
+
+			# get a list of all non-merge commit messages for the repo:
+			COMMITS=$(git log --no-merges --pretty=format:"- %s ( [%h](https://github.com/$ORG/$REPO/commit/%H) )")
+
+			# last two commits will be shown (not folded):
+			HEAD_COMMITS=$(echo "$COMMITS" | head -n 2)
+
+			# other commits will be folded: 
+			OLDER_COMMITS=$(echo "$COMMITS" | tail -n +3)
+
+			echo "$HEAD_COMMITS"
+			echo
+
+			if [ -n "$OLDER_COMMITS" ]; then
+				echo "<details>"
+				echo "<summary>more commits</summary>"
+				echo
+				echo "$OLDER_COMMITS"
+				echo
+				echo "</details>"
+				echo
+			fi
+
+			cd ..
+			rm -rf "$REPO"
+
+		} >> "$RELEASE_NOTES_FILE"
+
+		echo >> "$RELEASE_NOTES_FILE"
+	done
+
+	gh release edit "$RELEASE_TAG" --notes-file "$RELEASE_NOTES_FILE" --title "$RELEASE_TAG" 2>/dev/null || \
+	gh release create "$RELEASE_TAG" --notes-file "$RELEASE_NOTES_FILE"
+
