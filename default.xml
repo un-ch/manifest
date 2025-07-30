@@ -12,4 +12,10 @@
 
   <project name="last_prj"
            path="last_prj" />
+
+  <project name="a_prj"
+           path="a_prj" />
+
+  <project name="b_prj"
+           path="b_prj" />
 </manifest>
