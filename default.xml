@@ -7,8 +7,11 @@
            remote="origin"
            sync-j="4" />
 
-  <project name="new_project"
-           path="new_project" />
+  <project remote="origin"
+           name="new_project"
+           path="new_project"
+	   revision="8ee05b7eef56d1da46c61b098590a281a249f74a"
+	   upstream="main" />
 
   <project name="last_prj"
            path="last_prj" />
@@ -18,4 +21,7 @@
 
   <project name="b_prj"
            path="b_prj" />
+
+  <project name="c_prj"
+           path="c_prj" />
 </manifest>
