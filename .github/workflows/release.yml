@@ -1,11 +1,11 @@
 name: Create Release
 
 on:
-  # Triggered manually
+  # Manual trigger
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag name (if empty, will use release event tag)'
+        description: 'Tag name to release (must already exist)'
         required: false
         type: string
       release_name:
@@ -16,14 +16,14 @@ on:
         description: 'Release notes/description'
         required: false
         type: string
-        default: 'Release created via workflow dispatch'
+        default: 'Release created via GitHub Actions'
       prerelease:
         description: 'Mark as pre-release'
         required: false
         type: boolean
         default: false
 
-  # Triggered when you click "Create release" in the GitHub UI
+  # Automatic trigger when you create a release in GitHub UI
   release:
     types: [created]
 
@@ -56,14 +56,10 @@ jobs:
         echo "Validating tag: $TAG_NAME"
 
         git fetch --tags
-
         if git rev-parse "refs/tags/$TAG_NAME" >/dev/null 2>&1; then
           echo "✅ Tag '$TAG_NAME' exists"
         else
           echo "❌ Tag '$TAG_NAME' does not exist"
-          echo ""
-          echo "Available tags:"
-          git tag -l --sort=-version:refname | head -10
           exit 1
         fi
 
@@ -96,11 +92,7 @@ jobs:
           RELEASE_NAME="$TAG_NAME"
         fi
 
-        echo "Creating release:"
-        echo "  Tag: $TAG_NAME"
-        echo "  Name: $RELEASE_NAME"
-        echo "  Pre-release: $PRERELEASE"
-        echo "  Body: $BODY"
+        echo "Creating release for tag: $TAG_NAME"
 
         if [ "$PRERELEASE" = "true" ]; then
           gh release create "$TAG_NAME" \
