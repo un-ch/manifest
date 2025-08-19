@@ -8,10 +8,6 @@ on:
         description: 'Tag name to release (must already exist)'
         required: false
         type: string
-      release_name:
-        description: 'Release name (optional, defaults to tag name)'
-        required: false
-        type: string
       body:
         description: 'Release notes/description'
         required: false
@@ -40,6 +36,12 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
+    - name: Debug event info
+      run: |
+        echo "Event name: ${{ github.event_name }}"
+        echo "Release tag (from event): ${{ github.event.release.tag_name }}"
+        echo "Tag input (from dispatch): ${{ github.event.inputs.tag }}"
 
     - name: Determine tag
       id: tag
@@ -83,29 +85,29 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         TAG_NAME="${{ steps.tag.outputs.tag_name }}"
-        RELEASE_NAME="${{ github.event.inputs.release_name }}"
         BODY="${{ github.event.inputs.body }}"
         PRERELEASE="${{ github.event.inputs.prerelease }}"
 
-        # Default release name = tag
-        if [ -z "$RELEASE_NAME" ]; then
-          RELEASE_NAME="$TAG_NAME"
-        fi
+        RELEASE_TITLE="🚀 Release $TAG_NAME (created by GitHub Actions)"
 
-        echo "Creating release for tag: $TAG_NAME"
+        echo "Creating release:"
+        echo "  Tag: $TAG_NAME"
+        echo "  Title: $RELEASE_TITLE"
+        echo "  Body: $BODY"
+        echo "  Pre-release: $PRERELEASE"
 
         if [ "$PRERELEASE" = "true" ]; then
           gh release create "$TAG_NAME" \
-            --title "$RELEASE_NAME" \
+            --title "$RELEASE_TITLE" \
             --notes "$BODY" \
             --prerelease \
             --generate-notes
         else
           gh release create "$TAG_NAME" \
-            --title "$RELEASE_NAME" \
+            --title "$RELEASE_TITLE" \
             --notes "$BODY" \
             --generate-notes
         fi
 
-        echo "✅ Release '$RELEASE_NAME' created successfully for tag '$TAG_NAME'!"
+        echo "✅ Release '$RELEASE_TITLE' created successfully for tag '$TAG_NAME'!"
 
