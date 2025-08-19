@@ -1,11 +1,12 @@
 name: Create Release
 
 on:
+  # Triggered manually
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Select existing tag from dropdown or enter tag name'
-        required: true
+        description: 'Tag name (if empty, will use release event tag)'
+        required: false
         type: string
       release_name:
         description: 'Release name (optional, defaults to tag name)'
@@ -22,6 +23,10 @@ on:
         type: boolean
         default: false
 
+  # Triggered when you click "Create release" in the GitHub UI
+  release:
+    types: [created]
+
 permissions:
   contents: write
   packages: write
@@ -29,22 +34,29 @@ permissions:
 jobs:
   create-release:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        
+
+    - name: Determine tag
+      id: tag
+      run: |
+        if [ "${{ github.event_name }}" = "release" ]; then
+          echo "tag_name=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+        else
+          echo "tag_name=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+        fi
+
     - name: Validate tag exists
       run: |
-        TAG_NAME="${{ github.event.inputs.tag }}"
+        TAG_NAME="${{ steps.tag.outputs.tag_name }}"
         echo "Validating tag: $TAG_NAME"
-        
-        # Fetch all tags
+
         git fetch --tags
-        
-        # Check if tag exists
+
         if git rev-parse "refs/tags/$TAG_NAME" >/dev/null 2>&1; then
           echo "✅ Tag '$TAG_NAME' exists"
         else
@@ -54,45 +66,42 @@ jobs:
           git tag -l --sort=-version:refname | head -10
           exit 1
         fi
-        
+
     - name: Check for existing release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        TAG_NAME="${{ github.event.inputs.tag }}"
+        TAG_NAME="${{ steps.tag.outputs.tag_name }}"
         echo "Checking if release already exists for tag: $TAG_NAME"
-        
+
         if gh release view "$TAG_NAME" >/dev/null 2>&1; then
           echo "❌ Release for tag '$TAG_NAME' already exists"
-          echo ""
-          echo "Existing release details:"
           gh release view "$TAG_NAME"
           exit 1
         else
           echo "✅ No existing release found for tag '$TAG_NAME'"
         fi
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
+
     - name: Create Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        TAG_NAME="${{ github.event.inputs.tag }}"
+        TAG_NAME="${{ steps.tag.outputs.tag_name }}"
         RELEASE_NAME="${{ github.event.inputs.release_name }}"
         BODY="${{ github.event.inputs.body }}"
         PRERELEASE="${{ github.event.inputs.prerelease }}"
-        
-        # Use release name or fall back to tag name
+
+        # Default release name = tag
         if [ -z "$RELEASE_NAME" ]; then
           RELEASE_NAME="$TAG_NAME"
         fi
-        
+
         echo "Creating release:"
         echo "  Tag: $TAG_NAME"
         echo "  Name: $RELEASE_NAME"
         echo "  Pre-release: $PRERELEASE"
         echo "  Body: $BODY"
-        
-        # Create release using GitHub CLI
+
         if [ "$PRERELEASE" = "true" ]; then
           gh release create "$TAG_NAME" \
             --title "$RELEASE_NAME" \
@@ -105,5 +114,6 @@ jobs:
             --notes "$BODY" \
             --generate-notes
         fi
-        
+
         echo "✅ Release '$RELEASE_NAME' created successfully for tag '$TAG_NAME'!"
+
