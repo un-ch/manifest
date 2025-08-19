@@ -60,7 +60,6 @@ jobs:
         TAG_NAME="${{ steps.tag.outputs.tag_name }}"
         echo "Generating release notes for $TAG_NAME..."
 
-        # Get previous tag for comparison
         PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -A1 "^$TAG_NAME$" | tail -1)
 
         if [ -n "$PREVIOUS_TAG" ] && [ "$PREVIOUS_TAG" != "$TAG_NAME" ]; then
@@ -78,12 +77,11 @@ $CHANGELOG
 **Full Changelog**: https://github.com/${{ github.repository }}/commits/$TAG_NAME"
         fi
 
-        echo "$RELEASE_BODY"
-
-        # Correct multiline output syntax
+        # Correct way to set multiline output
         echo "release_body<<'EOF'" >> $GITHUB_OUTPUT
-        echo "$RELEASE_BODY" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+echo "$RELEASE_BODY" >> $GITHUB_OUTPUT
+echo "EOF" >> $GITHUB_OUTPUT
+
 
     - name: Create GitHub Release
       env:
