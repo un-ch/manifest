@@ -46,7 +46,7 @@ jobs:
       run: |
         TAG_NAME="${{ steps.tag.outputs.tag_name }}"
         if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-          echo "❌ Release already exists for $TAG_NAME"
+          echo "❌ Release already exists for tag $TAG_NAME"
           echo "release_exists=true" >> $GITHUB_OUTPUT
           exit 1
         else
@@ -79,8 +79,9 @@ $CHANGELOG
         fi
 
         echo "$RELEASE_BODY"
-        # Save to output
-        echo "release_body<<EOF" >> $GITHUB_OUTPUT
+
+        # Correct multiline output syntax
+        echo "release_body<<'EOF'" >> $GITHUB_OUTPUT
         echo "$RELEASE_BODY" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
 
