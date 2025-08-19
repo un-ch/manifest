@@ -67,21 +67,6 @@ jobs:
           CHANGELOG=$(git log --pretty=format:"- %s" "$PREVIOUS_TAG..$TAG_NAME" 2>/dev/null || echo "- Initial release")
           RELEASE_BODY="## What's Changed
 
-$CHANGELOG
-
-**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...$TAG_NAME"
-        else
-          RELEASE_BODY="## What's Changed
-
-- Initial release
-
-**Full Changelog**: https://github.com/${{ github.repository }}/commits/$TAG_NAME"
-        fi
-
-# UNINDENTED multiline output for GitHub Actions
-echo "release_body<<'EOF'" >> $GITHUB_OUTPUT
-echo "$RELEASE_BODY" >> $GITHUB_OUTPUT
-echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Create GitHub Release
       env:
