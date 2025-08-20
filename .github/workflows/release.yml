@@ -1,119 +1,94 @@
-name: Create Release from Tag
-# This workflow can be triggered on any tag through the GitHub API
-# It will detect which tag triggered it and create a release for that tag
+name: Create Release (Worked)
+
 on:
-  workflow_dispatch: {}
-  # Allow manual triggering without any inputs
-  
-  create:
-    # Automatically trigger when a new tag is created
-    tags:
-      - '*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name for the release (e.g., v1.0.0)'
+        required: true
+        type: string
+      release_name:
+        description: 'Release name (optional, defaults to tag name)'
+        required: false
+        type: string
+      body:
+        description: 'Release notes/description'
+        required: false
+        type: string
+        default: 'Release created via workflow dispatch'
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
 permissions:
   contents: write
   packages: write
+
 jobs:
   create-release:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 0  # Fetch all history and tags
         
-    - name: Get tag name
-      id: tag
+    - name: Verify tag exists and check for existing release
       run: |
-        if [ "${{ github.event_name }}" = "create" ] && [ "${{ github.event.ref_type }}" = "tag" ]; then
-          # Triggered by tag creation
-          TAG_NAME="${{ github.event.ref }}"
-        elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          # Manually triggered - detect from ref
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            TAG_NAME="${{ github.ref_name }}"
-          else
-            echo "❌ Error: Manual workflow must be run from a tag"
-            echo "Current ref: ${{ github.ref }}"
-            echo "Please use 'Use workflow from: Tags' and select a tag"
-            exit 1
-          fi
+        set -e
+        TAG_NAME='${{ github.event.inputs.tag }}'
+        echo "Checking for tag: ${TAG_NAME}"
+        
+        git fetch --tags
+        
+        if git tag -l | grep -Fx "${TAG_NAME}"; then
+          echo "✓ Tag '${TAG_NAME}' exists"
         else
-          echo "❌ Error: Unsupported trigger"
+          echo "✗ Error: Tag '${TAG_NAME}' does not exist"
+          echo "Available tags:"
+          git tag -l --sort=-version:refname | head -10
           exit 1
         fi
         
-        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-        echo "✅ Detected tag: $TAG_NAME"
-        
-    - name: Check if release exists
-      id: check_release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        TAG_NAME="${{ steps.tag.outputs.tag_name }}"
-        
-        if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-          echo "❌ Release already exists for tag $TAG_NAME"
-          echo "release_exists=true" >> $GITHUB_OUTPUT
+        # Check if release already exists
+        if gh release list | grep -q "${TAG_NAME}"; then
+          echo "⚠️ Release for tag '${TAG_NAME}' already exists"
+          echo "Existing releases:"
+          gh release list --limit 5
           exit 1
         else
-          echo "✅ No existing release found for tag $TAG_NAME"
-          echo "release_exists=false" >> $GITHUB_OUTPUT
+          echo "✓ No existing release found for tag '${TAG_NAME}'"
         fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
-    - name: Generate release notes
-      id: release_notes
+    - name: Create Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        TAG_NAME="${{ steps.tag.outputs.tag_name }}"
+        TAG_NAME='${{ github.event.inputs.tag }}'
+        RELEASE_NAME='${{ github.event.inputs.release_name }}'
+        BODY='${{ github.event.inputs.body }}'
+        PRERELEASE='${{ github.event.inputs.prerelease }}'
         
-        echo "Generating release notes for $TAG_NAME..."
+        # Use release name or fall back to tag name
+        if [ -z "$RELEASE_NAME" ]; then
+          RELEASE_NAME="$TAG_NAME"
+        fi
         
-        # Get the previous tag for comparison (fixed logic)
-        PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -v "^$TAG_NAME$" | head -1)
-        
-        if [ -n "$PREVIOUS_TAG" ]; then
-          echo "Comparing $PREVIOUS_TAG...$TAG_NAME"
-          
-          # Generate changelog between tags
-          CHANGELOG=$(git log --pretty=format:"- %s" "$PREVIOUS_TAG..$TAG_NAME" 2>/dev/null || echo "- Initial release")
-          
-          # Create release body
-          RELEASE_BODY="## What's Changed
-
-$CHANGELOG
-
-**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...$TAG_NAME"
+        # Create release using GitHub CLI
+        if [ "$PRERELEASE" = "true" ]; then
+          gh release create "$TAG_NAME" \
+            --title "$RELEASE_NAME" \
+            --notes "$BODY" \
+            --prerelease \
+            --generate-notes
         else
-          RELEASE_BODY="## What's Changed
-- Initial release
-
-**Full Changelog**: https://github.com/${{ github.repository }}/commits/$TAG_NAME"
+          gh release create "$TAG_NAME" \
+            --title "$RELEASE_NAME" \
+            --notes "$BODY" \
+            --generate-notes
         fi
-        
-        echo "Generated release notes:"
-        echo "$RELEASE_BODY"
-        
-        # Save to output (escape newlines)
-        {
-          echo 'release_body<<EOF'
-          echo "$RELEASE_BODY"
-          echo 'EOF'
-        } >> $GITHUB_OUTPUT
-        
-    - name: Create GitHub Release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        TAG_NAME="${{ steps.tag.outputs.tag_name }}"
-        RELEASE_BODY="${{ steps.release_notes.outputs.release_body }}"
-        
-        echo "Creating GitHub release for $TAG_NAME..."
-        
-        gh release create "$TAG_NAME" \
-          --title "$TAG_NAME" \
-          --notes "$RELEASE_BODY"
-          
-        echo "✅ Successfully created release for $TAG_NAME"
