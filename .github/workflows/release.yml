@@ -25,7 +25,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # Fetch all history and tags
+        fetch-depth: 0
         
     - name: Verify tag exists and check for existing release
       run: |
@@ -47,8 +47,6 @@ jobs:
         # Check if release already exists
         if gh release list | grep -q "${TAG_NAME}"; then
           echo "⚠️ Release for tag '${TAG_NAME}' already exists"
-          echo "Existing releases:"
-          gh release list --limit 5
           exit 1
         else
           echo "✓ No existing release found for tag '${TAG_NAME}'"
@@ -61,25 +59,15 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         TAG_NAME='${{ github.event.inputs.tag }}'
-        RELEASE_NAME='${{ github.event.inputs.release_name }}'
-        BODY='${{ github.event.inputs.body }}'
         PRERELEASE='${{ github.event.inputs.prerelease }}'
         
-        # Use release name or fall back to tag name
-        if [ -z "$RELEASE_NAME" ]; then
-          RELEASE_NAME="$TAG_NAME"
-        fi
-        
-        # Create release using GitHub CLI
         if [ "$PRERELEASE" = "true" ]; then
           gh release create "$TAG_NAME" \
-            --title "$RELEASE_NAME" \
-            --notes "$BODY" \
-            --prerelease \
-            --generate-notes
+            --title "$TAG_NAME" \
+            --generate-notes \
+            --prerelease
         else
           gh release create "$TAG_NAME" \
-            --title "$RELEASE_NAME" \
-            --notes "$BODY" \
+            --title "$TAG_NAME" \
             --generate-notes
         fi
