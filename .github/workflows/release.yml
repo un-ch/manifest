@@ -28,6 +28,18 @@ jobs:
       run: |
         set -e
         TAG_NAME='${{ github.event.inputs.tag }}'
+        echo "Raw input value: '${{ github.event.inputs.tag }}'"
+        echo "TAG_NAME variable: '${TAG_NAME}'"
+        echo "TAG_NAME length: ${#TAG_NAME}"
+        
+        # Check if tag name is empty
+        if [ -z "$TAG_NAME" ]; then
+          echo "✗ Error: Tag name is empty. Please provide a tag name."
+          echo "Available tags:"
+          git tag -l --sort=-version:refname | head -10
+          exit 1
+        fi
+        
         echo "Checking for tag: ${TAG_NAME}"
         
         git fetch --tags
