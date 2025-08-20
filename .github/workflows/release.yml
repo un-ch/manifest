@@ -1,5 +1,4 @@
 name: Create Release
-
 on:
   workflow_dispatch:
     inputs:
@@ -12,11 +11,9 @@ on:
         required: false
         type: boolean
         default: false
-
 permissions:
   contents: write
   packages: write
-
 jobs:
   create-release:
     runs-on: ubuntu-latest
@@ -25,7 +22,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 0  # Fetch all history and tags
         
     - name: Verify tag exists and check for existing release
       run: |
@@ -47,6 +44,8 @@ jobs:
         # Check if release already exists
         if gh release list | grep -q "${TAG_NAME}"; then
           echo "⚠️ Release for tag '${TAG_NAME}' already exists"
+          echo "Existing releases:"
+          gh release list --limit 5
           exit 1
         else
           echo "✓ No existing release found for tag '${TAG_NAME}'"
@@ -61,6 +60,7 @@ jobs:
         TAG_NAME='${{ github.event.inputs.tag }}'
         PRERELEASE='${{ github.event.inputs.prerelease }}'
         
+        # Create release using GitHub CLI
         if [ "$PRERELEASE" = "true" ]; then
           gh release create "$TAG_NAME" \
             --title "$TAG_NAME" \
