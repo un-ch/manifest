@@ -7,15 +7,6 @@ on:
         description: 'Tag name for the release (e.g., v1.0.0)'
         required: true
         type: string
-      release_name:
-        description: 'Release name (optional, defaults to tag name)'
-        required: false
-        type: string
-      body:
-        description: 'Release notes/description'
-        required: false
-        type: string
-        default: 'Release created via workflow dispatch'
       prerelease:
         description: 'Mark as pre-release'
         required: false
